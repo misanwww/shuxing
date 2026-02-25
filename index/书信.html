@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>致未来的“侨乡”伙伴们 - 数字家书</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&display=swap');
+        body { margin: 0; overflow: hidden; background-color: #0a192f; font-family: 'Noto Serif SC', serif; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(212, 188, 148, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(184, 158, 110, 0.2); border-radius: 10px; }
+        
+        /* 信纸基础样式 */
+        .letter-paper {
+            background-color: #fcfaf2;
+            position: relative;
+            box-shadow: 
+                0 0 0 1px rgba(184, 158, 110, 0.2),
+                0 10px 30px rgba(0,0,0,0.3),
+                inset 0 0 60px rgba(184, 158, 110, 0.05);
+        }
+
+        /* 随内容滚动的纹理层 */
+        .scrolling-texture {
+            background-image: 
+                linear-gradient(rgba(184, 158, 110, 0.15) 1px, transparent 1px);
+            background-size: 100% 2.1rem; /* 与行高一致 */
+            background-attachment: local;
+            padding-bottom: 80px;
+        }
+
+        /* 固定信纸边框装饰 */
+        .letter-border {
+            position: absolute;
+            inset: 15px;
+            border: 1px solid rgba(184, 158, 110, 0.3);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .letter-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #b89e6e;
+            z-index: 11;
+        }
+        .corner-tl { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+        .corner-tr { top: 10px; right: 10px; border-left: 0; border-bottom: 0; }
+        .corner-bl { bottom: 10px; left: 10px; border-right: 0; border-top: 0; }
+        .corner-br { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+
+        .letter-p { 
+            text-indent: 2em; 
+            margin-bottom: 2rem; 
+            text-align: justify; 
+            line-height: 2.1rem; 
+            color: #1e293b; 
+            font-size: 1.1rem; 
+            position: relative;
+            z-index: 5;
+        }
+        
+        .deco-line { 
+            height: 1.5px; 
+            background: linear-gradient(90deg, transparent 5%, #c4a678 20%, #c4a678 80%, transparent 95%); 
+            margin: 3.5rem 0; 
+            position: relative; 
+            opacity: 0.8;
+        }
+        .deco-line::after { 
+            content: '✦'; 
+            position: absolute; 
+            left: 50%; 
+            top: 50%; 
+            transform: translate(-50%, -50%); 
+            background: #fcfaf2; 
+            padding: 0 1.5rem; 
+            color: #b08d57; 
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        
+        .closing-divider {
+            border-top: 2px solid #e5d5bc;
+            margin-top: 4rem;
+            padding-top: 3rem;
+            position: relative;
+        }
+
+        .img-container { 
+            position: relative; 
+            padding: 8px; 
+            background: white; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            border: 1px solid #e2e8f0; 
+            margin: 1.5rem auto 2.5rem auto; 
+            max-width: 85%; 
+        }
+
+        /* 信封结构 */
+        .envelope-wrapper { perspective: 1500px; position: relative; }
+        .envelope-body {
+            position: relative;
+            width: 400px;
+            height: 280px;
+            background: #e2d1c3;
+            border-radius: 4px;
+            transform-style: preserve-3d;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .envelope-flap {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #d4c1b0;
+            clip-path: polygon(0 0, 100% 0, 50% 55%);
+            transform-origin: top;
+            z-index: 30;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            pointer-events: none;
+        }
+        .envelope-pocket {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 100%;
+            background: #e2d1c3;
+            clip-path: polygon(0 0, 0 100%, 100% 100%, 100% 0, 50% 45%);
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* 火漆印章优化：去掉了跳动动画 */
+        .wax-seal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 76px;
+            height: 76px;
+            margin-top: -38px;
+            margin-left: -38px;
+            background: radial-gradient(circle at 30% 30%, #a82e2e, #8b1c1c);
+            border-radius: 50%;
+            z-index: 100;
+            box-shadow: 
+                0 6px 15px rgba(0,0,0,0.5), 
+                inset 0 0 10px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px solid #701010;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+        .wax-seal:hover {
+            transform: scale(1.1);
+            background: radial-gradient(circle at 30% 30%, #b02020, #9b1c1c);
+        }
+
+        .postage-stamp {
+            position: absolute;
+            top: 25px; right: 25px; width: 60px; height: 75px;
+            background: #fff; padding: 5px; box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+            transform: rotate(6deg); z-index: 25; pointer-events: none;
+            border: 1px dashed #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        window.onload = function() {
+            const { useState, useEffect, useRef } = React;
+            const motion = window.Motion.motion;
+            const AnimatePresence = window.Motion.AnimatePresence;
+
+            // 内置 SVG 图标组件
+            const IconPlay = () => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2.5', strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polygon', { points: '5 3 19 12 5 21 5 3' }));
+            const IconPause = () => React.createElement('svg', { width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2.5', strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('rect', { x: '6', y: '4', width: '4', height: '16' }), React.createElement('rect', { x: '14', y: '4', width: '4', height: '16' }));
+            const IconVolume2 = () => React.createElement('svg', { width: '20', height: '20', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polygon', { points: '11 5 6 9 2 9 2 15 6 15 11 19 11 5' }), React.createElement('path', { d: 'M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07' }));
+            const IconVolumeX = () => React.createElement('svg', { width: '20', height: '20', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polygon', { points: '11 5 6 9 2 9 2 15 6 15 11 19 11 5' }), React.createElement('line', { x1: '23', y1: '9', x2: '17', y2: '15' }), React.createElement('line', { x1: '17', y1: '9', x2: '23', y2: '15' }));
+            const IconHeartSeal = () => React.createElement('svg', { width: '34', height: '34', viewBox: '0 0 24 24', fill: '#d4bc94', stroke: '#d4bc94', strokeWidth: '1' }, React.createElement('path', { d: 'M19 4H5c-1.1 0-1.99.9-1.99 2L3 18c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-7 4-7-4V6l7 4 7-4v2z' }));
+
+            const IMAGES = {
+                city_hakka: "石化新城和客家围屋.jpg",
+                ocean_lab: "海洋馆未来实验室.jpg",
+                food_map: "海鲜粥和美食版图.jpg",
+                stamp_icon: "https://api.dicebear.com/7.x/shapes/svg?seed=stamp&backgroundColor=b08d57"
+            };
+
+            const App = () => {
+                const [isOpen, setIsOpen] = useState(false);
+                const [isOpening, setIsOpening] = useState(false);
+                const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+                const [isPlaying, setIsPlaying] = useState(false);
+                
+                const audioRef = useRef(new Audio("朗读.MP3"));
+                const bgmRef = useRef(new Audio("BGM.MP3"));
+                const scrollRef = useRef(null);
+
+                useEffect(() => {
+                    bgmRef.current.loop = true;
+                    bgmRef.current.volume = 0.3;
+                }, []);
+
+                useEffect(() => {
+                    if (isOpen) {
+                        const timer = setTimeout(() => {
+                            setIsAutoScrolling(true);
+                            setIsPlaying(true);
+                        }, 800);
+                        return () => clearTimeout(timer);
+                    }
+                }, [isOpen]);
+
+                useEffect(() => {
+                    let interval;
+                    if (isAutoScrolling && isOpen) {
+                        interval = setInterval(() => {
+                            if (scrollRef.current) {
+                                const el = scrollRef.current;
+                                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
+                                    setIsAutoScrolling(false);
+                                } else {
+                                    el.scrollTop += 0.8;
+                                }
+                            }
+                        }, 30);
+                    }
+                    return () => clearInterval(interval);
+                }, [isAutoScrolling, isOpen]);
+
+                useEffect(() => {
+                    if (isOpen) {
+                        if (isPlaying) audioRef.current.play().catch(() => {});
+                        else audioRef.current.pause();
+                    }
+                }, [isPlaying, isOpen]);
+
+                const handleOpen = (e) => {
+                    if (e) e.stopPropagation();
+                    if (isOpening) return;
+                    setIsOpening(true);
+                    bgmRef.current.play().catch(() => {});
+                    setTimeout(() => setIsOpen(true), 1200);
+                };
+
+                return React.createElement('div', { className: 'min-h-screen bg-[#0a192f] flex items-center justify-center p-4 overflow-hidden relative' },
+                    React.createElement('div', { className: 'fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_50%,#1a365d_0%,#0a192f_100%)]' }),
+
+                    React.createElement(AnimatePresence, { mode: 'wait' },
+                        !isOpen ? React.createElement(motion.div, {
+                            key: 'env',
+                            initial: { scale: 0.8, opacity: 0 },
+                            animate: { scale: 1, opacity: 1 },
+                            exit: { y: -1000, opacity: 0, transition: { duration: 0.8, ease: "easeIn" } },
+                            className: 'envelope-wrapper z-50'
+                        },
+                            React.createElement(motion.div, {
+                                className: 'envelope-body',
+                                whileHover: isOpening ? {} : { y: -15, rotateX: 3 }
+                            },
+                                React.createElement('div', { className: 'envelope-border' }),
+                                React.createElement('div', { className: 'postage-stamp' }, React.createElement('img', { src: IMAGES.stamp_icon, className: 'w-full h-full object-cover' })),
+                                
+                                React.createElement('div', { className: 'absolute inset-0 flex flex-col items-center justify-end pb-12 z-[25] pointer-events-none' },
+                                    React.createElement('p', { className: 'text-amber-900/80 font-bold tracking-[0.25em] mb-1.5 text-lg' }, '致未来的“侨乡”伙伴们'),
+                                    React.createElement('p', { className: 'text-amber-900/40 text-xs tracking-[0.4em] font-medium' }, '惠州大亚湾 · 数字家书')
+                                ),
+
+                                React.createElement(motion.div, {
+                                    className: 'envelope-flap',
+                                    animate: isOpening ? { rotateX: 160, zIndex: 10 } : { rotateX: 0 },
+                                    transition: { duration: 0.8 }
+                                }),
+                                React.createElement('div', { className: 'envelope-pocket' }),
+
+                                React.createElement('div', {
+                                    className: 'wax-seal',
+                                    onClick: handleOpen
+                                }, 
+                                    React.createElement(IconHeartSeal)
+                                )
+                            ),
+                            !isOpening && React.createElement(motion.p, {
+                                initial: { opacity: 0 },
+                                animate: { opacity: [0, 1, 0] },
+                                transition: { duration: 2.5, repeat: Infinity },
+                                className: 'text-blue-200/40 text-center mt-12 tracking-[0.5em] text-sm font-bold'
+                            }, '点 击 火 漆 启 封')
+                        ) : React.createElement(motion.div, {
+                            key: 'letter',
+                            initial: { opacity: 0, y: 150 },
+                            animate: { opacity: 1, y: 0 },
+                            className: 'w-full max-w-4xl h-[95vh] letter-paper shadow-2xl rounded-sm relative flex flex-col z-50 overflow-hidden'
+                        },
+                            /* 固定在顶层的信纸装饰边框 */
+                            React.createElement('div', { className: 'letter-border' }),
+                            React.createElement('div', { className: 'letter-corner corner-tl' }),
+                            React.createElement('div', { className: 'letter-corner corner-tr' }),
+                            React.createElement('div', { className: 'letter-corner corner-bl' }),
+                            React.createElement('div', { className: 'letter-corner corner-br' }),
+
+                            /* 右上角 UI 控制 */
+                            React.createElement('div', { className: 'absolute top-8 right-10 flex items-center gap-4 z-[200]' },
+                                React.createElement('button', {
+                                    onClick: () => setIsAutoScrolling(!isAutoScrolling),
+                                    className: `flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-bold transition-all shadow-md active:scale-95 ${isAutoScrolling ? 'bg-amber-900 text-white' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'}`
+                                }, 
+                                    isAutoScrolling ? React.createElement(IconPause) : React.createElement(IconPlay),
+                                    isAutoScrolling ? '停止滚动' : '自动滚动'
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => setIsPlaying(!isPlaying),
+                                    className: `p-2.5 rounded-full transition-all shadow-md active:scale-95 ${isPlaying ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`
+                                },
+                                    isPlaying ? React.createElement(IconVolume2) : React.createElement(IconVolumeX)
+                                )
+                            ),
+
+                            /* 内容滚动区 */
+                            React.createElement('div', {
+                                ref: scrollRef,
+                                className: 'flex-1 overflow-y-auto custom-scrollbar scroll-smooth relative z-20',
+                                onWheel: () => setIsAutoScrolling(false),
+                                onTouchStart: () => setIsAutoScrolling(false)
+                            },
+                                React.createElement('div', { className: 'scrolling-texture px-10 md:px-24 py-24 min-h-full' },
+                                    React.createElement('div', { className: 'max-w-2xl mx-auto' },
+                                        React.createElement('h1', { className: 'text-3xl md:text-4xl font-bold text-center mb-16 text-slate-900 tracking-[0.2em]' }, '致未来的“侨乡”伙伴们'),
+                                        
+                                        React.createElement('p', { className: 'text-lg font-bold mb-4 text-slate-800' }, '亲爱的伙伴们：'),
+                                        React.createElement('p', { className: 'text-lg font-bold mb-10 ml-8 text-slate-800' }, '你们好！'),
+
+                                        React.createElement('div', { className: 'letter-body' },
+                                            React.createElement('div', { className: 'img-container' }, React.createElement('img', { src: IMAGES.city_hakka, className: 'w-full h-auto' })),
+                                            React.createElement('p', { className: 'letter-p' }, '当指尖划过屏幕，一封承载着惠州大亚湾记忆与梦想的“数字家书”便悄然启程。这里是我们的家乡——一座既保留着客家围屋炊烟、渔港咸腥海风，又闪耀着石化新城光芒的“未来侨乡”。在这个寒假，让我们暂别纸质信笺，用键盘作笔、屏幕为纸，当一回“数字小信使”，把家乡的故事写进会动的图画里，录进清脆的童声中。'),
+                                            
+                                            React.createElement('div', { className: 'deco-line' }),
+
+                                            React.createElement('div', { className: 'img-container' }, React.createElement('img', { src: IMAGES.ocean_lab, className: 'w-full h-auto' })),
+                                            React.createElement('p', { className: 'letter-p' }, '你们可曾想过，20年后的惠州大亚湾会是什么模样？或许那时的渔船靠着海浪能滑行在碧波上，或许霞涌沙滩旁矗立着透明的“海洋生态馆”。请用画笔在平板上描绘“未来侨乡”的画卷，再录一段语音，告诉未来的自己：“现在的我正坐在客家老屋的天井里，透过树叶的缝隙看着星空，畅想着你的模样。”'),
+
+                                            React.createElement('div', { className: 'deco-line' }),
+
+                                            React.createElement('div', { className: 'img-container' }, React.createElement('img', { src: IMAGES.food_map, className: 'w-full h-auto' })),
+                                            React.createElement('p', { className: 'letter-p' }, '我们的家乡是无数海外游子魂牵梦绕的“侨乡”。你们可以拍一段妈妈制作“大亚湾海鲜粥”的短视频，配上稚嫩的解说：“叔叔阿姨，这是我们的‘黄金海岸’，这里的鱼虾最鲜甜。”让这份带着家乡烟火气的“电子书信”，跨越千山万水，慰藉那些远方游子的思乡之情。'),
+
+                                            React.createElement('p', { className: 'letter-p' }, '同学们，数字世界就像一张无形的大网，将我们与远方紧紧相连。让我们用最真诚的心意，最灵动的创意，去书写这封属于“未来侨乡”的数字书信。')
+                                        ),
+
+                                        React.createElement('div', { className: 'closing-divider' },
+                                            React.createElement('div', { className: 'mb-12' },
+                                                React.createElement('p', { className: 'ml-8 text-xl text-slate-800' }, '祝：'),
+                                                React.createElement('p', { className: 'font-bold mt-3 text-xl text-slate-800' }, '学业进步，梦想成真！')
+                                            ),
+                                            React.createElement('div', { className: 'text-right mt-16' },
+                                                React.createElement('p', { className: 'text-3xl font-bold text-slate-900 mb-3 tracking-wider' }, '吴彦希'),
+                                                React.createElement('p', { className: 'text-slate-500 text-base italic' }, '2026年3月15日')
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
+            };
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(React.createElement(App));
+        };
+    </script>
+</body>
+</html>
